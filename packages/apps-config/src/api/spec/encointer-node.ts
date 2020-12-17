@@ -9,6 +9,7 @@
 export default {
   Address: 'AccountId',
   LookupSource: 'AccountId',
+  // Scheduler
   CeremonyPhaseType: {
     _enum: [
       'Registering',
@@ -17,15 +18,14 @@ export default {
     ]
   },
   CeremonyIndexType: 'u32',
-  ParticipantIndexType: 'u64',
-  MeetupIndexType: 'u64',
-  AttestationIndexType: 'u64',
-  CurrencyIdentifier: 'Hash',
+  // Balances
   BalanceType: 'i128',
   BalanceEntry: {
     principal: 'i128',
     last_update: 'BlockNumber'
   },
+  // Currencies
+  CurrencyIdentifier: 'Hash',
   CurrencyCeremony: {
     cid: 'CurrencyIdentifier',
     cindex: 'CeremonyIndexType'
@@ -34,6 +34,10 @@ export default {
     lat: 'i64',
     lon: 'i64'
   },
+  // Ceremonies
+  ParticipantIndexType: 'u64',
+  MeetupIndexType: 'u64',
+  AttestationIndexType: 'u64',
   Reputation: {
     _enum: [
       'Unverified',
@@ -67,6 +71,10 @@ export default {
     attendee_public: 'AccountId',
     attendee_signature: 'Signature'
   },
+  // Bazaar IPFS URIs
+  ShopIdentifier: 'Text',
+  ArticleIdentifier: 'Text',
+  // SubstraTEE
   ShardIdentifier: 'Hash',
   Request: {
     shard: 'ShardIdentifier',
