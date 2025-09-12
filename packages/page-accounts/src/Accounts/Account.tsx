@@ -1,22 +1,28 @@
-// Copyright 2017-2024 @polkadot/app-accounts authors & contributors
+// Copyright 2017-2025 @polkadot/app-accounts authors & contributors
 // SPDX-License-Identifier: Apache-2.0
+
+// This is for the use of `Ledger`
+//
+/* eslint-disable deprecation/deprecation */
 
 import type { ApiPromise } from '@polkadot/api';
 import type { SubmittableExtrinsic } from '@polkadot/api/types';
 import type { DeriveDemocracyLock, DeriveStakingAccount } from '@polkadot/api-derive/types';
-import type { Ledger } from '@polkadot/hw-ledger';
+import type { Ledger, LedgerGeneric } from '@polkadot/hw-ledger';
 import type { ActionStatus } from '@polkadot/react-components/Status/types';
 import type { Option } from '@polkadot/types';
 import type { ProxyDefinition, RecoveryConfig } from '@polkadot/types/interfaces';
 import type { KeyringAddress, KeyringJson$Meta } from '@polkadot/ui-keyring/types';
 import type { AccountBalance, Delegation } from '../types.js';
 
+import FileSaver from 'file-saver';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import useAccountLocks from '@polkadot/app-referenda/useAccountLocks';
 import { AddressInfo, AddressSmall, Badge, Button, ChainLock, Columar, CryptoType, Forget, LinkExternal, Menu, Popup, styled, Table, Tags, TransferModal } from '@polkadot/react-components';
 import { useAccountInfo, useApi, useBalancesAll, useBestNumber, useCall, useLedger, useQueue, useStakingInfo, useToggle } from '@polkadot/react-hooks';
 import { keyring } from '@polkadot/ui-keyring';
+import { settings } from '@polkadot/ui-settings';
 import { BN, BN_ZERO, formatBalance, formatNumber, isFunction } from '@polkadot/util';
 
 import Backup from '../modals/Backup.js';
@@ -44,6 +50,7 @@ interface Props {
   proxy?: [ProxyDefinition[], BN];
   setBalance: (address: string, value: AccountBalance) => void;
   toggleFavorite: (address: string) => void;
+  onStatusChange: (status: ActionStatus) => void;
 }
 
 interface DemocracyUnlockable {
@@ -136,17 +143,23 @@ function createClearReferendaTx (api: ApiPromise, address: string, ids: [BN, BN]
   return api.tx.utility.batch(inner);
 }
 
-async function showLedgerAddress (getLedger: () => Ledger, meta: KeyringJson$Meta): Promise<void> {
+async function showLedgerAddress (getLedger: () => LedgerGeneric | Ledger, meta: KeyringJson$Meta, ss58Prefix: number): Promise<void> {
+  const currApp = settings.get().ledgerApp;
   const ledger = getLedger();
 
-  await ledger.getAddress(true, meta.accountOffset || 0, meta.addressOffset || 0);
+  if (currApp === 'migration' || currApp === 'generic') {
+    await (ledger as LedgerGeneric).getAddress(ss58Prefix, true, meta.accountOffset || 0, meta.addressOffset || 0);
+  } else {
+    // This will always be the `chainSpecific` setting if the above condition is not met
+    await (ledger as Ledger).getAddress(true, meta.accountOffset || 0, meta.addressOffset || 0);
+  }
 }
 
 const transformRecovery = {
   transform: (opt: Option<RecoveryConfig>) => opt.unwrapOr(null)
 };
 
-function Account ({ account: { address, meta }, className = '', delegation, filter, isFavorite, proxy, setBalance, toggleFavorite }: Props): React.ReactElement<Props> | null {
+function Account ({ account: { address, meta }, className = '', delegation, filter, isFavorite, onStatusChange, proxy, setBalance, toggleFavorite }: Props): React.ReactElement<Props> | null {
   const { t } = useTranslation();
   const [isExpanded, toggleIsExpanded] = useToggle(false);
   const { queueExtrinsic } = useQueue();
@@ -186,7 +199,7 @@ function Account ({ account: { address, meta }, className = '', delegation, filt
         locked: balancesAll.lockedBalance,
         redeemable: stakingInfo?.redeemable || BN_ZERO,
         total: balancesAll.freeBalance.add(balancesAll.reservedBalance),
-        transferrable: balancesAll.availableBalance,
+        transferable: balancesAll.transferable || balancesAll.availableBalance,
         unbonding: calcUnbonding(stakingInfo)
       });
 
@@ -264,6 +277,32 @@ function Account ({ account: { address, meta }, className = '', delegation, filt
     [address, t]
   );
 
+  const _onExportMultisig = useCallback(() => {
+    try {
+      if (!isMultisig) {
+        throw new Error('not a multisig account');
+      }
+
+      if (!meta.who) {
+        throw new Error('signatories not found');
+      }
+
+      const signatories: string[] = meta.who;
+      const blob = new Blob([JSON.stringify(signatories, null, 2)], { type: 'application/json; charset=utf-8' });
+
+      FileSaver.saveAs(blob, `${accName}_${address}_${new Date().getTime()}.json`);
+    } catch (error) {
+      const status: ActionStatus = {
+        account: address,
+        action: 'export',
+        message: (error as Error).message,
+        status: 'error'
+      };
+
+      onStatusChange(status);
+    }
+  }, [accName, address, isMultisig, meta.who, onStatusChange]);
+
   const _clearDemocracyLocks = useCallback(
     () => democracyUnlockTx && queueExtrinsic({
       accountId: address,
@@ -292,11 +331,11 @@ function Account ({ account: { address, meta }, className = '', delegation, filt
     // TODO: we should check the hardwareType from metadata here as well,
     // for now we are always assuming hardwareType === 'ledger'
     (): void => {
-      showLedgerAddress(getLedger, meta).catch((error): void => {
+      showLedgerAddress(getLedger, meta, api.consts.system.ss58Prefix.toNumber()).catch((error): void => {
         console.error(`ledger: ${(error as Error).message}`);
       });
     },
-    [getLedger, meta]
+    [getLedger, meta, api.consts.system.ss58Prefix]
   );
 
   const menuItems = useMemo(() => [
@@ -367,6 +406,14 @@ function Account ({ account: { address, meta }, className = '', delegation, filt
           key='backupJson'
           label={t('Create a backup file for this account')}
           onClick={toggleBackup}
+        />
+      ),
+      !(isInjected || isDevelopment) && isMultisig && (
+        <Menu.Item
+          icon='database'
+          key='backupJson'
+          label={t('Export JSON file with signatories')}
+          onClick={_onExportMultisig}
         />
       ),
       !(isExternal || isHardware || isInjected || isMultisig || isDevelopment) && (
@@ -455,7 +502,7 @@ function Account ({ account: { address, meta }, className = '', delegation, filt
       />
     ])
   ].filter((i) => i),
-  [_clearDemocracyLocks, _clearReferendaLocks, _showOnHardware, _vestingVest, api, apiIdentity.tx.identity, enableIdentity, delegation, democracyUnlockTx, genesisHash, identity, isDevelopment, isDevelopmentApiProps, isEthereumApiProps, isEditable, isEthereum, isExternal, isHardware, isInjected, isMultisig, multiInfos, onSetGenesisHash, proxy, referendaUnlockTx, recoveryInfo, t, toggleBackup, toggleDelegate, toggleDerive, toggleForget, toggleIdentityMain, toggleIdentitySub, toggleMultisig, togglePassword, toggleProxyOverview, toggleRecoverAccount, toggleRecoverSetup, toggleUndelegate, vestingVestTx]);
+  [_clearDemocracyLocks, _clearReferendaLocks, _showOnHardware, _vestingVest, _onExportMultisig, api, apiIdentity.tx.identity, enableIdentity, delegation, democracyUnlockTx, genesisHash, identity, isDevelopment, isDevelopmentApiProps, isEthereumApiProps, isEditable, isEthereum, isExternal, isHardware, isInjected, isMultisig, multiInfos, onSetGenesisHash, proxy, referendaUnlockTx, recoveryInfo, t, toggleBackup, toggleDelegate, toggleDerive, toggleForget, toggleIdentityMain, toggleIdentitySub, toggleMultisig, togglePassword, toggleProxyOverview, toggleRecoverAccount, toggleRecoverSetup, toggleUndelegate, vestingVestTx]);
 
   if (!isVisible) {
     return null;

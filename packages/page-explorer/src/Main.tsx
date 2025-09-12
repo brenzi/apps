@@ -1,4 +1,4 @@
-// Copyright 2017-2024 @polkadot/app-explorer authors & contributors
+// Copyright 2017-2025 @polkadot/app-explorer authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { HeaderExtended } from '@polkadot/api-derive/types';
@@ -29,7 +29,10 @@ function Main ({ eventCount, events, headers }: Props): React.ReactElement<Props
           <BlockHeaders headers={headers} />
         </Columar.Column>
         <Columar.Column>
-          <Events events={events} />
+          <Events
+            events={events}
+            showToggle
+          />
         </Columar.Column>
       </Columar>
     </>

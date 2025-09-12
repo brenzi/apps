@@ -29,20 +29,6 @@ export const prodParasPolkadot: Omit<EndpointOption, 'teleport'>[] = [
       color: '#658ea9',
       logo: nodesIntegriteeSVG
     }
-  },
-  {
-    homepage: 'https://integritee.network',
-    info: 'integritee',
-    paraId: 2039,
-    providers: {
-      // Dwellir: 'wss://integritee-rpc.dwellir.com',
-      // Integritee: 'wss://polkadot.api.integritee.network'
-    },
-    text: 'Integritee Network',
-    ui: {
-      color: '#2e154b',
-      logo: nodesIntegriteeSVG
-    }
   }
 ];
 

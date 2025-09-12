@@ -1,8 +1,8 @@
-// Copyright 2017-2024 @polkadot/app-referenda authors & contributors
+// Copyright 2017-2025 @polkadot/app-referenda authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { ChartOptions, ChartTypeRegistry, TooltipItem } from 'chart.js';
-import type { PalletConvictionVotingTally, PalletRankedCollectiveTally, PalletReferendaReferendumInfoConvictionVotingTally, PalletReferendaReferendumInfoRankedCollectiveTally, PalletReferendaTrackInfo } from '@polkadot/types/lookup';
+import type { PalletConvictionVotingTally, PalletRankedCollectiveTally, PalletReferendaReferendumInfoConvictionVotingTally, PalletReferendaReferendumInfoRankedCollectiveTally, PalletReferendaTrackDetails } from '@polkadot/types/lookup';
 import type { BN } from '@polkadot/util';
 import type { CurveGraph, ReferendumProps as Props } from '../types.js';
 
@@ -98,7 +98,7 @@ function createTitleCallback (t: (key: string, options?: { replace: Record<strin
   };
 }
 
-function getChartResult (totalEligible: BN, isConvictionVote: boolean, info: PalletReferendaReferendumInfoConvictionVotingTally | PalletReferendaReferendumInfoRankedCollectiveTally, track: PalletReferendaTrackInfo, trackGraph: CurveGraph): ChartResultExt[] | null {
+function getChartResult (totalEligible: BN, isConvictionVote: boolean, info: PalletReferendaReferendumInfoConvictionVotingTally | PalletReferendaReferendumInfoRankedCollectiveTally, track: PalletReferendaTrackDetails, trackGraph: CurveGraph): ChartResultExt[] | null {
   if (totalEligible && isConvictionVote && info.isOngoing) {
     const ongoing = info.asOngoing;
 
@@ -141,13 +141,16 @@ function getChartResult (totalEligible: BN, isConvictionVote: boolean, info: Pal
         supx = (supn || supx !== -1) ? supx : i;
       }
 
-      const step = x[1].sub(x[0]);
+      // Bringing it to a higher precision.
+      // Otherwise, graphs with short periods (on dev chains) are invalid.
+      const stepWithPrecision = x[x.length - 1].sub(x[0]).muln(100).divn(x.length);
       const lastIndex = x.length - 1;
       const lastBlock = endConfirm?.add(track.minEnactmentPeriod);
 
       // if the confirmation end is later than shown on our graph, we extend it
       if (lastBlock?.gt(since.add(x[lastIndex]))) {
-        let currentBlock = x[lastIndex].add(since).add(step);
+        let currentBlockWithPrecision = x[lastIndex].add(since).muln(100).add(stepWithPrecision);
+        let currentBlock = currentBlockWithPrecision.divn(100);
 
         do {
           labels.push(formatNumber(currentBlock));
@@ -163,7 +166,8 @@ function getChartResult (totalEligible: BN, isConvictionVote: boolean, info: Pal
           values[1][1].push(values[1][1][lastIndex]);
           values[1][2].push(values[1][2][lastIndex]);
 
-          currentBlock = currentBlock.add(step);
+          currentBlockWithPrecision = currentBlockWithPrecision.add(stepWithPrecision);
+          currentBlock = currentBlockWithPrecision.divn(100);
         } while (currentBlock.lt(lastBlock));
       }
 
@@ -177,7 +181,7 @@ function getChartResult (totalEligible: BN, isConvictionVote: boolean, info: Pal
   return null;
 }
 
-function getChartProps (bestNumber: BN, blockInterval: BN, chartProps: ChartResultExt[], refId: BN, track: PalletReferendaTrackInfo, t: (key: string, options?: { replace: Record<string, unknown> }) => string): ChartProps[] {
+function getChartProps (bestNumber: BN, blockInterval: BN, chartProps: ChartResultExt[], refId: BN, track: PalletReferendaTrackDetails, t: (key: string, options?: { replace: Record<string, unknown> }) => string): ChartProps[] {
   const changeXMax = chartProps.reduce((max, { changeX }) =>
     max === -1 || changeX === -1
       ? -1
@@ -300,7 +304,7 @@ function getChartProps (bestNumber: BN, blockInterval: BN, chartProps: ChartResu
   });
 }
 
-function extractInfo (info: PalletReferendaReferendumInfoConvictionVotingTally | PalletReferendaReferendumInfoRankedCollectiveTally, track?: PalletReferendaTrackInfo): { confirmEnd: BN | null, enactAt: { at: boolean, blocks: BN, end: BN | null } | null, nextAlarm: null | BN, submittedIn: null | BN } {
+function extractInfo (info: PalletReferendaReferendumInfoConvictionVotingTally | PalletReferendaReferendumInfoRankedCollectiveTally, track?: PalletReferendaTrackDetails): { confirmEnd: BN | null, enactAt: { at: boolean, blocks: BN, end: BN | null } | null, nextAlarm: null | BN, submittedIn: null | BN } {
   let confirmEnd: BN | null = null;
   let enactAt: { at: boolean, blocks: BN, end: BN | null } | null = null;
   let nextAlarm: BN | null = null;

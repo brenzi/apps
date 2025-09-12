@@ -1,4 +1,4 @@
-// Copyright 2017-2024 @polkadot/app-democracy authors & contributors
+// Copyright 2017-2025 @polkadot/app-democracy authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { BN } from '@polkadot/util';
@@ -82,7 +82,7 @@ function Propose ({ className = '', onClose }: Props): React.ReactElement<Props>
             label={t('send from account')}
             labelExtra={
               <Available
-                label={<span className='label'>{t('transferrable')}</span>}
+                label={<span className='label'>{t('transferable')}</span>}
                 params={accountId}
               />
             }

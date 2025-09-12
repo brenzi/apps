@@ -1,7 +1,7 @@
-// Copyright 2017-2024 @polkadot/app-referenda authors & contributors
+// Copyright 2017-2025 @polkadot/app-referenda authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
-import type { PalletReferendaTrackInfo } from '@polkadot/types/lookup';
+import type { PalletReferendaTrackDetails } from '@polkadot/types/lookup';
 import type { BN } from '@polkadot/util';
 import type { PalletReferenda } from '../../types.js';
 
@@ -17,7 +17,7 @@ interface Props {
   className?: string;
   id: BN;
   palletReferenda: PalletReferenda;
-  track: PalletReferendaTrackInfo;
+  track: PalletReferendaTrackDetails;
 }
 
 function Deposit ({ className = '', id, palletReferenda, track }: Props): React.ReactElement<Props> | null {
@@ -41,7 +41,7 @@ function Deposit ({ className = '', id, palletReferenda, track }: Props): React.
                 label={t('deposit from account')}
                 labelExtra={
                   <Available
-                    label={<span className='label'>{t('transferrable')}</span>}
+                    label={<span className='label'>{t('transferable')}</span>}
                     params={accountId}
                   />
                 }

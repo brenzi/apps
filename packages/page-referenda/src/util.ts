@@ -1,8 +1,8 @@
-// Copyright 2017-2024 @polkadot/app-referenda authors & contributors
+// Copyright 2017-2025 @polkadot/app-referenda authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { ApiPromise } from '@polkadot/api';
-import type { PalletConvictionVotingTally, PalletRankedCollectiveTally, PalletReferendaCurve, PalletReferendaReferendumInfoConvictionVotingTally, PalletReferendaReferendumInfoRankedCollectiveTally, PalletReferendaTrackInfo } from '@polkadot/types/lookup';
+import type { PalletConvictionVotingTally, PalletRankedCollectiveTally, PalletReferendaCurve, PalletReferendaReferendumInfoConvictionVotingTally, PalletReferendaReferendumInfoRankedCollectiveTally, PalletReferendaTrackDetails } from '@polkadot/types/lookup';
 import type { CurveGraph, TrackDescription, TrackInfoExt } from './types.js';
 
 import { getGovernanceTracks } from '@polkadot/apps-config';
@@ -10,7 +10,7 @@ import { BN, BN_BILLION, BN_ONE, BN_ZERO, bnMax, bnMin, formatNumber, objectSpre
 
 const CURVE_LENGTH = 500;
 
-export function getTrackName (trackId: BN, { name }: PalletReferendaTrackInfo): string {
+export function getTrackName (trackId: BN, { name }: PalletReferendaTrackDetails): string {
   return `${
     formatNumber(trackId)
   } / ${
@@ -206,7 +206,7 @@ export function curveDelay (curve: PalletReferendaCurve, input: BN, div: BN): BN
   throw new Error(`Unknown curve found ${curve.type}`);
 }
 
-export function calcDecidingEnd (totalEligible: BN, tally: PalletRankedCollectiveTally | PalletConvictionVotingTally, { decisionPeriod, minApproval, minSupport }: PalletReferendaTrackInfo, since: BN): BN | undefined {
+export function calcDecidingEnd (totalEligible: BN, tally: PalletRankedCollectiveTally | PalletConvictionVotingTally, { decisionPeriod, minApproval, minSupport }: PalletReferendaTrackDetails, since: BN): BN | undefined {
   const support = isConvictionTally(tally)
     ? tally.support
     : tally.bareAyes;
@@ -223,20 +223,24 @@ export function calcDecidingEnd (totalEligible: BN, tally: PalletRankedCollectiv
   );
 }
 
-export function calcCurves ({ decisionPeriod, minApproval, minSupport }: PalletReferendaTrackInfo): CurveGraph {
+export function calcCurves ({ decisionPeriod, minApproval, minSupport }: PalletReferendaTrackDetails): CurveGraph {
   const approval = new Array<BN>(CURVE_LENGTH);
   const support = new Array<BN>(CURVE_LENGTH);
   const x = new Array<BN>(CURVE_LENGTH);
-  const step = decisionPeriod.divn(CURVE_LENGTH);
   const last = CURVE_LENGTH - 1;
-  let current = new BN(0);
+  // Bringing it to a higher precision before dividing by curve length.
+  // Otherwise, graphs with short periods (on dev chains) are invalid.
+  const stepWithPrecision = decisionPeriod.muln(100).divn(CURVE_LENGTH);
+  let currentWithPrecision = new BN(0);
 
   for (let i = 0; i < last; i++) {
+    const current = currentWithPrecision.divn(100);
+
     approval[i] = curveThreshold(minApproval, current, decisionPeriod);
     support[i] = curveThreshold(minSupport, current, decisionPeriod);
     x[i] = current;
 
-    current = current.add(step);
+    currentWithPrecision = currentWithPrecision.add(stepWithPrecision);
   }
 
   // since we may be lossy with the step, we explicitly calc the final point at 100%

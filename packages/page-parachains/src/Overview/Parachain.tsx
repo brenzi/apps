@@ -1,4 +1,4 @@
-// Copyright 2017-2024 @polkadot/app-parachains authors & contributors
+// Copyright 2017-2025 @polkadot/app-parachains authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { AccountId, GroupIndex, ParaId } from '@polkadot/types/interfaces';
@@ -96,6 +96,7 @@ function Parachain ({ bestNumber, className = '', id, lastBacked, lastInclusion,
           ? (
             <Badge
               color='orange'
+              hover={t('The parachain can be modified, replaced, or removed - it\'s neither protected nor in a transitional state')}
               icon='unlock'
             />
           )
