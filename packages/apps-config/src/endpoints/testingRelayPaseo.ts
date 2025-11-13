@@ -55,7 +55,7 @@ export const testRelayPaseo: EndpointOption = {
     // 'light client': 'light://substrate-connect/paseo'
   },
   teleport: getTeleports(testParasPaseoCommon),
-  text: 'Paseo',
+  text: 'Paseo Relay',
   ui: {
     color: '#38393F',
     identityIcon: 'polkadot',

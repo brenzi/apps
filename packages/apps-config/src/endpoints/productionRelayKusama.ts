@@ -1,10 +1,10 @@
-// Copyright 2017-2024 @polkadot/apps-config authors & contributors
+// Copyright 2017-2025 @polkadot/apps-config authors & contributors
 // SPDX-License-Identifier: Apache-2.0
 
 import type { EndpointOption } from './types.js';
 
 import { KUSAMA_GENESIS } from '../api/constants.js';
-import { chainsKusamaSVG } from '../ui/logos/chains/index.js';
+import { chainsKusamaSVG, chainsAssethubKusamaSVG } from '../ui/logos/chains/index.js';
 import { nodesEncointerBlueSVG, nodesIntegriteeSVG } from '../ui/logos/nodes/index.js';
 import { getTeleports } from './util.js';
 
@@ -33,6 +33,20 @@ export const prodParasKusama: Omit<EndpointOption, 'teleport'>[] = [
 ];
 
 export const prodParasKusamaCommon: EndpointOption[] = [
+  {
+    info: 'KusamaAssetHub',
+    paraId: 1000,
+    providers: {
+      bezzera: 'wss://bezzera.integritee.network:4230',
+    },
+    relayName: 'kusama',
+    teleport: [-1, 1002, 1005, 1001, 1004],
+    text: 'AssetHub',
+    ui: {
+      color: '#113911',
+      logo: chainsAssethubKusamaSVG
+    }
+  },
   {
     homepage: 'https://encointer.org/',
     info: 'encointer',
@@ -66,7 +80,7 @@ export const prodRelayKusama: EndpointOption = {
     'light client': 'light://substrate-connect/kusama'
   },
   teleport: getTeleports(prodParasKusamaCommon),
-  text: 'Kusama',
+  text: 'Kusama Relay',
   ui: {
     color: '#000000',
     identityIcon: 'polkadot',
